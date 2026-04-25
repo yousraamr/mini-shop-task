@@ -85,7 +85,7 @@ mini-shop-task/
 ```bash
 git clone https://github.com/yousraamr/mini-shop-task.git
 cd mini-shop-task
-
+```
 # ⚙️ Environment Variables
 Create the following .env files before running the project.
 /backend/.env
@@ -97,17 +97,17 @@ JWT_SECRET=your_super_secret_key
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_ANON_KEY=your_supabase_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
-
+```
 /dashboard/.env
 
 ```bash
 VITE_API_URL=http://localhost:5000
-
+```
 /mobile/.env
 
 ```bash
 EXPO_PUBLIC_API_URL=http://YOUR_LOCAL_IP:5000
-
+```
 Replace YOUR_LOCAL_IP with your computer IP when testing on a real device.
 
 # ▶️ Run the Backend
@@ -117,18 +117,18 @@ cd backend
 npm install
 npm run dev
 EXPO_PUBLIC_API_URL=http://YOUR_LOCAL_IP:5000
-
+```
 Server runs at:
 ```bash
 http://localhost:5000
-
+```
 # ▶️ Run the Dashboard
 
 ```bash
 cd dashboard
 npm install
 npm run dev
-
+```
 Dashboard runs at:
 http://localhost:5173
 
@@ -137,7 +137,7 @@ http://localhost:5173
 cd mobile
 npm install
 npx expo start
-
+```
 Then scan the QR code using Expo Go.
 
 # 📡 Main API Endpoints
@@ -228,11 +228,6 @@ Fastify REST API connected to Supabase PostgreSQL.
 # 👩‍💻 Author
 
 **Yousra Amr**
-
-- GitHub: https://github.com/yousraamr  
-- LinkedIn: https://linkedin.com/in/yousra-amr-93a691279  
-- Email: yousraamr000@gmail.com
-
-Replace YOUR_LOCAL_IP with your computer IP when testing on a real device.
-
-
+-  Email: [![Yousra Amr](https://img.shields.io/badge/yousra%20amr-Contact-blue)](mailto:yousraamr000@gmail.com)
+-  LinkedIn: [www.linkedin.com/in/yousra-amr-93a691279](https://www.linkedin.com/in/yousra-amr-93a691279)  
+-  GitHub: [@yousraamr](https://github.com/yousraamr)
