@@ -7,9 +7,10 @@ import { authGuard, adminGuard } from "../middleware/auth";
 export async function productRoutes(app: FastifyInstance) {
   app.get("/products", async (req, reply) => {
     const querySchema = z.object({
-      search: z.string().optional(),
-      category: z.string().optional(),
-    });
+    search: z.string().optional(),
+    category: z.string().optional(),
+    includeInactive: z.string().optional(),
+  });
 
     const parsed = querySchema.safeParse(req.query);
 
@@ -22,14 +23,13 @@ export async function productRoutes(app: FastifyInstance) {
     const { search, category } = parsed.data;
 
     let query = supabase
-      .from("products")
-      .select("*, categories(name, slug)")
-      .eq("is_active", true)
-      .order("created_at", { ascending: false });
+  .from("products")
+  .select("*, categories(name, slug)")
+  .order("created_at", { ascending: false });
 
-    if (search) {
-      query = query.ilike("name", `%${search}%`);
-    }
+if (req.query && !(parsed.data as any).includeInactive) {
+  query = query.eq("is_active", true);
+}
 
     if (category) {
       const { data: categoryData } = await supabase
