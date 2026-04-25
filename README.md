@@ -50,6 +50,10 @@ mini-shop-task/
 
 ---
 
+## Demo
+https://drive.google.com/file/d/1PUtkRLbTytBCMRNdS7TCvTMSYzK_69Hx/view?usp=drivesdk
+---
+
 ## ⚙️ Backend API
 
 - JWT Authentication
