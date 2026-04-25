@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import { api } from "../api";
 
 type Order = {
@@ -22,18 +23,27 @@ export default function Orders() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [statusFilter, setStatusFilter] = useState("All");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [loading, setLoading] = useState(true);
 
   async function loadOrders() {
-    const res = await api.get("/orders");
-    setOrders(res.data.orders);
+    try {
+      setLoading(true);
+      const res = await api.get("/orders");
+      setOrders(res.data.orders);
+    } catch {
+      toast.error("Failed to load orders");
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function updateStatus(id: string, status: string) {
     try {
       await api.patch(`/orders/${id}/status`, { status });
+      toast.success("Order status updated");
       await loadOrders();
     } catch (error: any) {
-      alert(error.response?.data?.message || "Update status failed");
+      toast.error(error.response?.data?.message || "Update status failed");
     }
   }
 
@@ -107,95 +117,108 @@ export default function Orders() {
           </select>
         </div>
 
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-          <table className="w-full border-collapse">
-            <thead className="bg-slate-50">
-              <tr>
-                <th className="text-left text-slate-500 font-semibold text-sm p-4">
-                  Order
-                </th>
-                <th className="text-left text-slate-500 font-semibold text-sm p-4">
-                  Customer
-                </th>
-                <th className="text-left text-slate-500 font-semibold text-sm p-4">
-                  Total
-                </th>
-                <th className="text-left text-slate-500 font-semibold text-sm p-4">
-                  Status
-                </th>
-                <th className="text-left text-slate-500 font-semibold text-sm p-4">
-                  Update
-                </th>
-                <th className="text-left text-slate-500 font-semibold text-sm p-4">
-                  Details
-                </th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {filteredOrders.map((order) => (
-                <tr key={order.id} className="border-t border-slate-200">
-                  <td className="p-4 font-semibold text-slate-900">
-                    #{order.id.slice(0, 8)}
-                  </td>
-
-                  <td className="p-4">
-                    <p className="font-semibold text-slate-900">
-                      {order.profiles?.name}
-                    </p>
-                    <p className="text-sm text-slate-500">
-                      {order.profiles?.email}
-                    </p>
-                  </td>
-
-                  <td className="p-4 text-slate-700">
-                    EGP {order.total_amount}
-                  </td>
-
-                  <td className="p-4">
-                    <span
-                      className={`inline-flex rounded-full px-3 py-1 text-sm font-bold ${badgeClass(
-                        order.status
-                      )}`}
-                    >
-                      {order.status}
-                    </span>
-                  </td>
-
-                  <td className="p-4">
-                    <select
-                      value={order.status}
-                      onChange={(e) => updateStatus(order.id, e.target.value)}
-                      className="border border-slate-300 rounded-lg px-3 py-2 bg-white outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option>Pending</option>
-                      <option>Processing</option>
-                      <option>Completed</option>
-                      <option>Cancelled</option>
-                    </select>
-                  </td>
-
-                  <td className="p-4">
-                    <button
-                      onClick={() => setSelectedOrder(order)}
-                      className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold"
-                    >
-                      View
-                    </button>
-                  </td>
-                </tr>
-              ))}
-
-              {filteredOrders.length === 0 && (
+        {loading ? (
+          <div className="space-y-4">
+            {[1, 2, 3].map((item) => (
+              <div
+                key={item}
+                className="h-24 bg-slate-200 rounded-2xl animate-pulse"
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <table className="w-full border-collapse">
+              <thead className="bg-slate-50">
                 <tr>
-                  <td colSpan={6} className="p-8 text-center text-slate-500">
-                    No orders found for this status.
-                  </td>
+                  <th className="text-left text-slate-500 font-semibold text-sm p-4">
+                    Order
+                  </th>
+                  <th className="text-left text-slate-500 font-semibold text-sm p-4">
+                    Customer
+                  </th>
+                  <th className="text-left text-slate-500 font-semibold text-sm p-4">
+                    Total
+                  </th>
+                  <th className="text-left text-slate-500 font-semibold text-sm p-4">
+                    Status
+                  </th>
+                  <th className="text-left text-slate-500 font-semibold text-sm p-4">
+                    Update
+                  </th>
+                  <th className="text-left text-slate-500 font-semibold text-sm p-4">
+                    Details
+                  </th>
                 </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+
+              <tbody>
+                {filteredOrders.map((order) => (
+                  <tr key={order.id} className="border-t border-slate-200">
+                    <td className="p-4 font-semibold text-slate-900">
+                      #{order.id.slice(0, 8)}
+                    </td>
+
+                    <td className="p-4">
+                      <p className="font-semibold text-slate-900">
+                        {order.profiles?.name}
+                      </p>
+                      <p className="text-sm text-slate-500">
+                        {order.profiles?.email}
+                      </p>
+                    </td>
+
+                    <td className="p-4 text-slate-700">
+                      EGP {order.total_amount}
+                    </td>
+
+                    <td className="p-4">
+                      <span
+                        className={`inline-flex rounded-full px-3 py-1 text-sm font-bold ${badgeClass(
+                          order.status
+                        )}`}
+                      >
+                        {order.status}
+                      </span>
+                    </td>
+
+                    <td className="p-4">
+                      <select
+                        value={order.status}
+                        onChange={(e) =>
+                          updateStatus(order.id, e.target.value)
+                        }
+                        className="border border-slate-300 rounded-lg px-3 py-2 bg-white outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option>Pending</option>
+                        <option>Processing</option>
+                        <option>Completed</option>
+                        <option>Cancelled</option>
+                      </select>
+                    </td>
+
+                    <td className="p-4">
+                      <button
+                        onClick={() => setSelectedOrder(order)}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold"
+                      >
+                        View
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+
+                {filteredOrders.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="p-8 text-center text-slate-500">
+                      No orders found for this status.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         {selectedOrder && (
           <div className="mt-6 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">

@@ -7,10 +7,10 @@ import { authGuard, adminGuard } from "../middleware/auth";
 export async function productRoutes(app: FastifyInstance) {
   app.get("/products", async (req, reply) => {
     const querySchema = z.object({
-    search: z.string().optional(),
-    category: z.string().optional(),
-    includeInactive: z.string().optional(),
-  });
+      search: z.string().optional(),
+      category: z.string().optional(),
+      includeInactive: z.coerce.boolean().optional().default(false),
+    });
 
     const parsed = querySchema.safeParse(req.query);
 
@@ -20,33 +20,41 @@ export async function productRoutes(app: FastifyInstance) {
         .send(appError(400, "Bad Request", parsed.error.issues[0].message));
     }
 
-    const { search, category } = parsed.data;
+    const { search, category, includeInactive } = parsed.data;
 
     let query = supabase
-  .from("products")
-  .select("*, categories(name, slug)")
-  .order("created_at", { ascending: false });
+      .from("products")
+      .select("*, categories(id, name, slug)")
+      .order("created_at", { ascending: false });
 
-if (req.query && !(parsed.data as any).includeInactive) {
-  query = query.eq("is_active", true);
-}
+    if (!includeInactive) {
+      query = query.eq("is_active", true);
+    }
+
+    if (search) {
+      query = query.ilike("name", `%${search}%`);
+    }
 
     if (category) {
-      const { data: categoryData } = await supabase
+      const { data: categoryData, error: categoryError } = await supabase
         .from("categories")
         .select("id")
         .eq("slug", category)
         .single();
 
-      if (categoryData) {
-        query = query.eq("category_id", categoryData.id);
+      if (categoryError || !categoryData) {
+        return reply.send({ products: [] });
       }
+
+      query = query.eq("category_id", categoryData.id);
     }
 
     const { data, error } = await query;
 
     if (error) {
-      return reply.code(400).send(appError(400, "Products Error", error.message));
+      return reply
+        .code(400)
+        .send(appError(400, "Products Error", error.message));
     }
 
     return reply.send({ products: data });
@@ -54,7 +62,7 @@ if (req.query && !(parsed.data as any).includeInactive) {
 
   app.get("/products/:id", async (req, reply) => {
     const paramsSchema = z.object({
-      id: z.string().uuid(),
+      id: z.string().uuid("Invalid product id"),
     });
 
     const parsed = paramsSchema.safeParse(req.params);
@@ -67,8 +75,9 @@ if (req.query && !(parsed.data as any).includeInactive) {
 
     const { data, error } = await supabase
       .from("products")
-      .select("*, categories(name, slug)")
+      .select("*, categories(id, name, slug)")
       .eq("id", parsed.data.id)
+      .eq("is_active", true)
       .single();
 
     if (error || !data) {
@@ -80,34 +89,19 @@ if (req.query && !(parsed.data as any).includeInactive) {
     return reply.send({ product: data });
   });
 
-  app.get("/categories", async (_req, reply) => {
-    const { data, error } = await supabase
-      .from("categories")
-      .select("*")
-      .order("name", { ascending: true });
-
-    if (error) {
-      return reply
-        .code(400)
-        .send(appError(400, "Categories Error", error.message));
-    }
-
-    return reply.send({ categories: data });
-  });
-
   app.post(
     "/products",
     { preHandler: [authGuard, adminGuard] },
     async (req, reply) => {
-      const schema = z.object({
-        name: z.string().min(2),
-        description: z.string().optional(),
-        price: z.number().positive(),
-        image_url: z.string().url().optional(),
-        category_id: z.string().uuid(),
+      const bodySchema = z.object({
+        name: z.string().min(2, "Product name must be at least 2 characters"),
+        description: z.string().min(5, "Description is too short"),
+        price: z.number().positive("Price must be positive"),
+        image_url: z.string().url("Invalid image URL"),
+        category_id: z.string().uuid("Invalid category id"),
       });
 
-      const parsed = schema.safeParse(req.body);
+      const parsed = bodySchema.safeParse(req.body);
 
       if (!parsed.success) {
         return reply
@@ -117,7 +111,10 @@ if (req.query && !(parsed.data as any).includeInactive) {
 
       const { data, error } = await supabase
         .from("products")
-        .insert(parsed.data)
+        .insert({
+          ...parsed.data,
+          is_active: true,
+        })
         .select()
         .single();
 
@@ -127,7 +124,10 @@ if (req.query && !(parsed.data as any).includeInactive) {
           .send(appError(400, "Create Product Error", error.message));
       }
 
-      return reply.code(201).send({ product: data });
+      return reply.code(201).send({
+        message: "Product created successfully",
+        product: data,
+      });
     }
   );
 
@@ -136,12 +136,12 @@ if (req.query && !(parsed.data as any).includeInactive) {
     { preHandler: [authGuard, adminGuard] },
     async (req, reply) => {
       const paramsSchema = z.object({
-        id: z.string().uuid(),
+        id: z.string().uuid("Invalid product id"),
       });
 
       const bodySchema = z.object({
         name: z.string().min(2).optional(),
-        description: z.string().optional(),
+        description: z.string().min(5).optional(),
         price: z.number().positive().optional(),
         image_url: z.string().url().optional(),
         category_id: z.string().uuid().optional(),
@@ -151,10 +151,22 @@ if (req.query && !(parsed.data as any).includeInactive) {
       const params = paramsSchema.safeParse(req.params);
       const body = bodySchema.safeParse(req.body);
 
-      if (!params.success || !body.success) {
+      if (!params.success) {
         return reply
           .code(400)
-          .send(appError(400, "Bad Request", "Invalid product data"));
+          .send(appError(400, "Bad Request", params.error.issues[0].message));
+      }
+
+      if (!body.success) {
+        return reply
+          .code(400)
+          .send(appError(400, "Bad Request", body.error.issues[0].message));
+      }
+
+      if (Object.keys(body.data).length === 0) {
+        return reply
+          .code(400)
+          .send(appError(400, "Bad Request", "No fields provided for update"));
       }
 
       const { data, error } = await supabase
@@ -170,42 +182,46 @@ if (req.query && !(parsed.data as any).includeInactive) {
           .send(appError(400, "Update Product Error", error.message));
       }
 
-      return reply.send({ product: data });
+      return reply.send({
+        message: "Product updated successfully",
+        product: data,
+      });
     }
   );
 
   app.delete(
-  "/products/:id",
-  { preHandler: [authGuard, adminGuard] },
-  async (req, reply) => {
-    const paramsSchema = z.object({
-      id: z.string().uuid(),
-    });
+    "/products/:id",
+    { preHandler: [authGuard, adminGuard] },
+    async (req, reply) => {
+      const paramsSchema = z.object({
+        id: z.string().uuid("Invalid product id"),
+      });
 
-    const parsed = paramsSchema.safeParse(req.params);
+      const parsed = paramsSchema.safeParse(req.params);
 
-    if (!parsed.success) {
-      return reply
-        .code(400)
-        .send(appError(400, "Bad Request", parsed.error.issues[0].message));
+      if (!parsed.success) {
+        return reply
+          .code(400)
+          .send(appError(400, "Bad Request", parsed.error.issues[0].message));
+      }
+
+      const { data, error } = await supabase
+        .from("products")
+        .update({ is_active: false })
+        .eq("id", parsed.data.id)
+        .select()
+        .single();
+
+      if (error) {
+        return reply
+          .code(400)
+          .send(appError(400, "Delete Product Error", error.message));
+      }
+
+      return reply.send({
+        message: "Product deleted successfully",
+        product: data,
+      });
     }
-
-    const { data, error } = await supabase
-      .from("products")
-      .update({ is_active: false })
-      .eq("id", parsed.data.id)
-      .select();
-
-    if (error) {
-      return reply
-        .code(400)
-        .send(appError(400, "Delete Product Error", error.message));
-    }
-
-    return reply.send({
-      message: "Product deleted successfully",
-      product: data?.[0] || null,
-    });
-  }
-);
+  );
 }

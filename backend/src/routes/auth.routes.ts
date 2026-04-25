@@ -8,10 +8,9 @@ import { authGuard } from "../middleware/auth";
 export async function authRoutes(app: FastifyInstance) {
   app.post("/auth/register", async (req, reply) => {
     const schema = z.object({
-      name: z.string().min(2),
-      email: z.string().email(),
-      password: z.string().min(6),
-      role: z.enum(["customer", "admin"]).optional(),
+      name: z.string().min(2, "Name must be at least 2 characters"),
+      email: z.string().email("Invalid email address"),
+      password: z.string().min(6, "Password must be at least 6 characters"),
     });
 
     const parsed = schema.safeParse(req.body);
@@ -22,7 +21,8 @@ export async function authRoutes(app: FastifyInstance) {
         .send(appError(400, "Bad Request", parsed.error.issues[0].message));
     }
 
-    const { name, email, password, role = "customer" } = parsed.data;
+    const { name, email, password } = parsed.data;
+    const role = "customer";
 
     const { data: authData, error: signUpError } =
       await supabase.auth.admin.createUser({
@@ -34,7 +34,13 @@ export async function authRoutes(app: FastifyInstance) {
     if (signUpError || !authData.user) {
       return reply
         .code(400)
-        .send(appError(400, "Register Error", signUpError?.message || "Failed"));
+        .send(
+          appError(
+            400,
+            "Register Error",
+            signUpError?.message || "Failed to register user"
+          )
+        );
     }
 
     const { error: profileError } = await supabase.from("profiles").insert({
@@ -63,8 +69,8 @@ export async function authRoutes(app: FastifyInstance) {
 
   app.post("/auth/login", async (req, reply) => {
     const schema = z.object({
-      email: z.string().email(),
-      password: z.string().min(6),
+      email: z.string().email("Invalid email address"),
+      password: z.string().min(6, "Password must be at least 6 characters"),
     });
 
     const parsed = schema.safeParse(req.body);
@@ -91,7 +97,7 @@ export async function authRoutes(app: FastifyInstance) {
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("*")
-      .eq("email", email)
+      .eq("id", data.user.id)
       .single();
 
     if (profileError || !profile) {
@@ -119,7 +125,7 @@ export async function authRoutes(app: FastifyInstance) {
 
   app.post("/auth/forgot-password", async (req, reply) => {
     const schema = z.object({
-      email: z.string().email(),
+      email: z.string().email("Invalid email address"),
     });
 
     const parsed = schema.safeParse(req.body);

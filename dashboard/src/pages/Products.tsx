@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import { api } from "../api";
 
 type Product = {
@@ -22,22 +23,32 @@ export default function Products() {
 
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
   const [image, setImage] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [categoryId, setCategoryId] = useState("");
 
   async function load() {
-    const p = await api.get("/products?includeInactive=true");
-    const c = await api.get("/categories");
+    try {
+      setLoading(true);
 
-    setProducts(p.data.products);
-    setCategories(c.data.categories);
+      const p = await api.get("/products?includeInactive=true");
+      const c = await api.get("/categories");
 
-    if (c.data.categories.length && !categoryId) {
-      setCategoryId(c.data.categories[0].id);
+      setProducts(p.data.products);
+      setCategories(c.data.categories);
+
+      if (c.data.categories.length && !categoryId) {
+        setCategoryId(c.data.categories[0].id);
+      }
+    } catch {
+      toast.error("Failed to load products");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -50,6 +61,7 @@ export default function Products() {
     setName("");
     setPrice("");
     setImage("");
+    setImageFile(null);
   }
 
   function startEdit(product: Product) {
@@ -58,17 +70,35 @@ export default function Products() {
     setPrice(String(product.price));
     setImage(product.image_url || "");
     setCategoryId(product.category_id);
+    setImageFile(null);
   }
+
+  async function uploadImageIfNeeded() {
+  if (!imageFile) return image;
+
+  const formData = new FormData();
+  formData.append("file", imageFile);
+
+  const res = await api.post("/uploads/product-image", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+
+  return res.data.image_url;
+}
 
   async function submitProduct(e: React.FormEvent) {
     e.preventDefault();
+
+    const uploadedImageUrl = await uploadImageIfNeeded();
 
     const payload = {
       name,
       price: Number(price),
       image_url:
-        image.trim() ||
-        "https://images.unsplash.com/photo-1523275335684-37898b6baf30",
+      uploadedImageUrl ||
+      "https://images.unsplash.com/photo-1523275335684-37898b6baf30",
       category_id: categoryId,
       description: "Product managed from dashboard",
     };
@@ -76,14 +106,16 @@ export default function Products() {
     try {
       if (editingId) {
         await api.patch(`/products/${editingId}`, payload);
+        toast.success("Product updated");
       } else {
         await api.post("/products", payload);
+        toast.success("Product created");
       }
 
       resetForm();
       await load();
     } catch (error: any) {
-      alert(error.response?.data?.message || "Product action failed");
+      toast.error(error.response?.data?.message || "Product action failed");
     }
   }
 
@@ -93,9 +125,10 @@ export default function Products() {
         is_active: !product.is_active,
       });
 
+      toast.success(product.is_active ? "Product deactivated" : "Product activated");
       await load();
     } catch (error: any) {
-      alert(error.response?.data?.message || "Toggle failed");
+      toast.error(error.response?.data?.message || "Toggle failed");
     }
   }
 
@@ -154,9 +187,9 @@ export default function Products() {
             />
 
             <input
-              placeholder="Image URL"
-              value={image}
-              onChange={(e) => setImage(e.target.value)}
+              type="file"
+              accept="image/*"
+              onChange={(e) => setImageFile(e.target.files?.[0] || null)}
               className="border border-slate-300 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500"
             />
 
@@ -190,78 +223,89 @@ export default function Products() {
           </div>
         </form>
 
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-          <table className="w-full border-collapse">
-            <thead className="bg-slate-50">
-              <tr>
-                <th className="text-left text-slate-500 font-semibold text-sm p-4">
-                  Product
-                </th>
-                <th className="text-left text-slate-500 font-semibold text-sm p-4">
-                  Category
-                </th>
-                <th className="text-left text-slate-500 font-semibold text-sm p-4">
-                  Price
-                </th>
-                <th className="text-left text-slate-500 font-semibold text-sm p-4">
-                  Status
-                </th>
-                <th className="text-left text-slate-500 font-semibold text-sm p-4">
-                  Edit
-                </th>
-                <th className="text-left text-slate-500 font-semibold text-sm p-4">
-                  Toggle
-                </th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {products.map((item) => (
-                <tr key={item.id} className="border-t border-slate-200">
-                  <td className="p-4 font-semibold text-slate-900">
-                    {item.name}
-                  </td>
-
-                  <td className="p-4 text-slate-600">
-                    {item.categories?.name || "—"}
-                  </td>
-
-                  <td className="p-4 text-slate-700">EGP {item.price}</td>
-
-                  <td className="p-4">
-                    <span
-                      className={`inline-flex rounded-full px-3 py-1 text-sm font-bold ${
-                        item.is_active
-                          ? "bg-green-100 text-green-700"
-                          : "bg-red-100 text-red-700"
-                      }`}
-                    >
-                      {item.is_active ? "Active" : "Inactive"}
-                    </span>
-                  </td>
-
-                  <td className="p-4">
-                    <button
-                      onClick={() => startEdit(item)}
-                      className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold"
-                    >
-                      Edit
-                    </button>
-                  </td>
-
-                  <td className="p-4">
-                    <button
-                      onClick={() => toggleActive(item)}
-                      className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-semibold"
-                    >
-                      {item.is_active ? "Deactivate" : "Activate"}
-                    </button>
-                  </td>
+        {loading ? (
+          <div className="space-y-4">
+            {[1, 2, 3, 4].map((item) => (
+              <div
+                key={item}
+                className="h-20 bg-slate-200 rounded-2xl animate-pulse"
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <table className="w-full border-collapse">
+              <thead className="bg-slate-50">
+                <tr>
+                  <th className="text-left text-slate-500 font-semibold text-sm p-4">
+                    Product
+                  </th>
+                  <th className="text-left text-slate-500 font-semibold text-sm p-4">
+                    Category
+                  </th>
+                  <th className="text-left text-slate-500 font-semibold text-sm p-4">
+                    Price
+                  </th>
+                  <th className="text-left text-slate-500 font-semibold text-sm p-4">
+                    Status
+                  </th>
+                  <th className="text-left text-slate-500 font-semibold text-sm p-4">
+                    Edit
+                  </th>
+                  <th className="text-left text-slate-500 font-semibold text-sm p-4">
+                    Toggle
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+
+              <tbody>
+                {products.map((item) => (
+                  <tr key={item.id} className="border-t border-slate-200">
+                    <td className="p-4 font-semibold text-slate-900">
+                      {item.name}
+                    </td>
+
+                    <td className="p-4 text-slate-600">
+                      {item.categories?.name || "—"}
+                    </td>
+
+                    <td className="p-4 text-slate-700">EGP {item.price}</td>
+
+                    <td className="p-4">
+                      <span
+                        className={`inline-flex rounded-full px-3 py-1 text-sm font-bold ${
+                          item.is_active
+                            ? "bg-green-100 text-green-700"
+                            : "bg-red-100 text-red-700"
+                        }`}
+                      >
+                        {item.is_active ? "Active" : "Inactive"}
+                      </span>
+                    </td>
+
+                    <td className="p-4">
+                      <button
+                        onClick={() => startEdit(item)}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold"
+                      >
+                        Edit
+                      </button>
+                    </td>
+
+                    <td className="p-4">
+                      <button
+                        onClick={() => toggleActive(item)}
+                        className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-semibold"
+                      >
+                        {item.is_active ? "Deactivate" : "Activate"}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </main>
     </div>
   );

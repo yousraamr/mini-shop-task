@@ -1,10 +1,13 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
+import multipart from "@fastify/multipart";
 import dotenv from "dotenv";
 import { authRoutes } from "./routes/auth.routes";
 import { productRoutes } from "./routes/product.routes";
 import { orderRoutes } from "./routes/order.routes";
 import { appError } from "./utils/error";
+import { uploadRoutes } from "./routes/upload.routes";
+import { categoryRoutes } from "./routes/category.routes";
 
 dotenv.config();
 
@@ -17,6 +20,8 @@ app.register(cors, {
   methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
 });
+
+app.register(multipart);
 
 app.setErrorHandler((error, req, reply) => {
   req.log.error(error);
@@ -39,6 +44,8 @@ app.get("/", async () => {
 app.register(authRoutes);
 app.register(productRoutes);
 app.register(orderRoutes);
+app.register(uploadRoutes);
+app.register(categoryRoutes);
 
 const start = async () => {
   try {

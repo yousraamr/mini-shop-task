@@ -15,23 +15,24 @@ import { useAuth } from "../context/AuthContext";
 import AnimatedButton from "../components/AnimatedButton";
 import { colors } from "../theme";
 
-export default function LoginScreen({ navigation }: any) {
-  const { login } = useAuth();
-  const [email, setEmail] = useState("customer@test.com");
-  const [password, setPassword] = useState("123456");
+export default function ForgotPasswordScreen({ navigation }: any) {
+  const { forgotPassword } = useAuth();
+  const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function handleLogin() {
-    if (!email.trim() || !password.trim()) {
-      Alert.alert("Missing details", "Please enter your email and password.");
+  async function handleReset() {
+    if (!email.trim()) {
+      Alert.alert("Missing email", "Please enter your email address.");
       return;
     }
 
     try {
       setLoading(true);
-      await login(email.trim(), password);
+      await forgotPassword(email.trim());
+      Alert.alert("Check your email", "Password reset email has been sent.");
+      navigation.goBack();
     } catch (error: any) {
-      Alert.alert("Login failed", error.message);
+      Alert.alert("Reset failed", error.message);
     } finally {
       setLoading(false);
     }
@@ -52,6 +53,23 @@ export default function LoginScreen({ navigation }: any) {
         }}
       >
         <Animated.View entering={FadeInUp.duration(450)}>
+          <Pressable
+            onPress={() => navigation.goBack()}
+            style={{
+              width: 46,
+              height: 46,
+              borderRadius: 17,
+              backgroundColor: "#fff",
+              alignItems: "center",
+              justifyContent: "center",
+              borderWidth: 1,
+              borderColor: "#E2E8F0",
+              marginBottom: 24,
+            }}
+          >
+            <Ionicons name="chevron-back" size={24} color={colors.ink} />
+          </Pressable>
+
           <View
             style={{
               width: 72,
@@ -63,18 +81,18 @@ export default function LoginScreen({ navigation }: any) {
               marginBottom: 24,
             }}
           >
-            <Ionicons name="bag-handle-outline" size={34} color="#fff" />
+            <Ionicons name="key-outline" size={34} color="#fff" />
           </View>
 
           <Text
             style={{
-              fontSize: 38,
+              fontSize: 36,
               fontWeight: "900",
               color: colors.ink,
               letterSpacing: -1,
             }}
           >
-            Welcome Back
+            Reset Password
           </Text>
 
           <Text
@@ -85,7 +103,7 @@ export default function LoginScreen({ navigation }: any) {
               lineHeight: 23,
             }}
           >
-            Login to continue shopping your favorite products.
+            Enter your email and we will send you a password reset link.
           </Text>
         </Animated.View>
 
@@ -118,48 +136,24 @@ export default function LoginScreen({ navigation }: any) {
             />
           </View>
 
-          <View style={styles.inputBox}>
-            <Ionicons name="lock-closed-outline" size={21} color="#94A3B8" />
-            <TextInput
-              placeholder="Password"
-              placeholderTextColor="#94A3B8"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              style={styles.input}
-            />
-          </View>
-
-          <Pressable onPress={() => navigation.navigate("ForgotPassword")}>
-            <Text
-              style={{
-                textAlign: "right",
-                color: colors.primary,
-                fontWeight: "900",
-                marginBottom: 16,
-              }}
-            >
-              Forgot Password?
-            </Text>
-          </Pressable>
-
-          <AnimatedButton title="Login" onPress={handleLogin} loading={loading} />
+          <AnimatedButton
+            title="Send Reset Email"
+            onPress={handleReset}
+            loading={loading}
+          />
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(220).duration(450)}>
-          <Pressable onPress={() => navigation.navigate("Register")}>
+          <Pressable onPress={() => navigation.navigate("Login")}>
             <Text
               style={{
                 textAlign: "center",
                 marginTop: 22,
-                color: colors.muted,
-                fontWeight: "700",
+                color: colors.primary,
+                fontWeight: "900",
               }}
             >
-              New to Mini Shop?{" "}
-              <Text style={{ color: colors.primary, fontWeight: "900" }}>
-                Create Account
-              </Text>
+              Back to Login
             </Text>
           </Pressable>
         </Animated.View>
