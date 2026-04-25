@@ -100,26 +100,71 @@ export default function Products() {
   }
 
   return (
-    <div className="page">
-      <aside className="sidebar">
-        <h2>Mini Shop</h2>
-        <button onClick={() => navigate("/dashboard")}>Dashboard</button>
-        <button onClick={() => navigate("/orders")}>Orders</button>
-        <button onClick={() => navigate("/products")}>Products</button>
+    <div className="min-h-screen bg-slate-100 flex">
+      <aside className="hidden md:flex w-64 bg-slate-900 text-white p-6 flex-col gap-3">
+        <h2 className="text-2xl font-bold mb-4">Mini Shop</h2>
+
+        <button
+          onClick={() => navigate("/dashboard")}
+          className="bg-slate-800 hover:bg-slate-700 rounded-xl px-4 py-3 text-left"
+        >
+          Dashboard
+        </button>
+
+        <button
+          onClick={() => navigate("/orders")}
+          className="bg-slate-800 hover:bg-slate-700 rounded-xl px-4 py-3 text-left"
+        >
+          Orders
+        </button>
+
+        <button
+          onClick={() => navigate("/products")}
+          className="bg-slate-700 rounded-xl px-4 py-3 text-left"
+        >
+          Products
+        </button>
       </aside>
 
-      <main className="content">
-        <div className="header">
-          <h1>Products</h1>
-          <p>Create, edit, and toggle product availability.</p>
+      <main className="flex-1 p-6 md:p-10 max-w-6xl mx-auto w-full">
+        <div className="mb-6">
+          <h1 className="text-4xl font-bold text-slate-900">Products</h1>
+          <p className="text-slate-500 mt-2">
+            Create, edit, and control product availability.
+          </p>
         </div>
 
-        <form className="form-card" onSubmit={submitProduct}>
-          <div className="form-grid">
-            <input placeholder="Product name" value={name} onChange={(e) => setName(e.target.value)} />
-            <input placeholder="Price" value={price} onChange={(e) => setPrice(e.target.value)} />
-            <input placeholder="Image URL" value={image} onChange={(e) => setImage(e.target.value)} />
-            <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
+        <form
+          onSubmit={submitProduct}
+          className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm mb-6"
+        >
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <input
+              placeholder="Product name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="border border-slate-300 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500"
+            />
+
+            <input
+              placeholder="Price"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+              className="border border-slate-300 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500"
+            />
+
+            <input
+              placeholder="Image URL"
+              value={image}
+              onChange={(e) => setImage(e.target.value)}
+              className="border border-slate-300 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500"
+            />
+
+            <select
+              value={categoryId}
+              onChange={(e) => setCategoryId(e.target.value)}
+              className="border border-slate-300 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+            >
               {categories.map((cat) => (
                 <option key={cat.id} value={cat.id}>
                   {cat.name}
@@ -128,50 +173,87 @@ export default function Products() {
             </select>
           </div>
 
-          <div style={{ marginTop: 14, display: "flex", gap: 10 }}>
-            <button className="primary-btn">
+          <div className="mt-4 flex gap-3">
+            <button className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-3 rounded-xl">
               {editingId ? "Update Product" : "Create Product"}
             </button>
+
             {editingId && (
-              <button type="button" className="danger-btn" onClick={resetForm}>
+              <button
+                type="button"
+                onClick={resetForm}
+                className="bg-red-500 hover:bg-red-600 text-white font-semibold px-5 py-3 rounded-xl"
+              >
                 Cancel
               </button>
             )}
           </div>
         </form>
 
-        <div className="table-card">
-          <table>
-            <thead>
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <table className="w-full border-collapse">
+            <thead className="bg-slate-50">
               <tr>
-                <th>Product</th>
-                <th>Category</th>
-                <th>Price</th>
-                <th>Status</th>
-                <th>Edit</th>
-                <th>Toggle</th>
+                <th className="text-left text-slate-500 font-semibold text-sm p-4">
+                  Product
+                </th>
+                <th className="text-left text-slate-500 font-semibold text-sm p-4">
+                  Category
+                </th>
+                <th className="text-left text-slate-500 font-semibold text-sm p-4">
+                  Price
+                </th>
+                <th className="text-left text-slate-500 font-semibold text-sm p-4">
+                  Status
+                </th>
+                <th className="text-left text-slate-500 font-semibold text-sm p-4">
+                  Edit
+                </th>
+                <th className="text-left text-slate-500 font-semibold text-sm p-4">
+                  Toggle
+                </th>
               </tr>
             </thead>
+
             <tbody>
               {products.map((item) => (
-                <tr key={item.id}>
-                  <td>
-                    <strong>{item.name}</strong>
+                <tr key={item.id} className="border-t border-slate-200">
+                  <td className="p-4 font-semibold text-slate-900">
+                    {item.name}
                   </td>
-                  <td>{item.categories?.name}</td>
-                  <td>EGP {item.price}</td>
-                  <td>
-                    <span className={`badge ${item.is_active ? "badge-completed" : "badge-cancelled"}`}>
+
+                  <td className="p-4 text-slate-600">
+                    {item.categories?.name || "—"}
+                  </td>
+
+                  <td className="p-4 text-slate-700">EGP {item.price}</td>
+
+                  <td className="p-4">
+                    <span
+                      className={`inline-flex rounded-full px-3 py-1 text-sm font-bold ${
+                        item.is_active
+                          ? "bg-green-100 text-green-700"
+                          : "bg-red-100 text-red-700"
+                      }`}
+                    >
                       {item.is_active ? "Active" : "Inactive"}
                     </span>
                   </td>
-                  <td>
-                    <button className="primary-btn" onClick={() => startEdit(item)}>
+
+                  <td className="p-4">
+                    <button
+                      onClick={() => startEdit(item)}
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold"
+                    >
                       Edit
                     </button>
                   </td>
-                  <td>
-                    <button className="danger-btn" onClick={() => toggleActive(item)}>
+
+                  <td className="p-4">
+                    <button
+                      onClick={() => toggleActive(item)}
+                      className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-semibold"
+                    >
                       {item.is_active ? "Deactivate" : "Activate"}
                     </button>
                   </td>
